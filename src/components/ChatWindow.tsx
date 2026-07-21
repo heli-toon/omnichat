@@ -115,9 +115,9 @@ export default function ChatWindow({
       } else {
         setIsListening(true);
         const demoQueries = [
-          "Optimize this system using NVIDIA Whisper latency guidelines.",
-          "Write a fast failover routing algorithm in Node.js.",
-          "What is the difference between Gemini Flash and Pro models?"
+          "Explain the difference between a DFA and an NFA with one example each.",
+          "Construct a regular expression for all binary strings that end in 01.",
+          "Show how to convert a regular grammar into a finite automaton."
         ];
         const randomQuery = demoQueries[Math.floor(Math.random() * demoQueries.length)];
         let currentText = "";
@@ -182,11 +182,14 @@ export default function ChatWindow({
     onUpdateSessionSettings(session.provider, session.model, !session.autoFailover);
   };
 
-  // Safe and super lightweight markdown-style parser
+  // Enhanced markdown-to-HTML renderer with support for headers, tables, math, lists, and more
   const renderFormattedText = (text: string) => {
-    const parts = text.split(/(```[\s\S]*?```|`.*?`)/g);
-    return parts.map((part, index) => {
-      // Code block
+    // Split by code blocks first to preserve them
+    const codeBlockRegex = /(```[\s\S]*?```)/g;
+    const parts = text.split(codeBlockRegex);
+    
+    return parts.flatMap((part, partIdx) => {
+      // Handle code blocks
       if (part.startsWith("```") && part.endsWith("```")) {
         const lines = part.slice(3, -3).trim().split("\n");
         let language = "";
@@ -195,7 +198,7 @@ export default function ChatWindow({
         }
         const codeContent = lines.join("\n");
         return (
-          <div key={index} className="my-2.5 rounded-lg border border-stone-200 dark:border-stone-850 overflow-hidden text-xs">
+          <div key={`code-${partIdx}`} className="my-2.5 rounded-lg border border-stone-200 dark:border-stone-850 overflow-hidden text-xs">
             {language && (
               <div className="bg-stone-100 dark:bg-stone-900 px-3 py-1.5 border-b border-stone-200 dark:border-stone-800 text-stone-500 dark:text-stone-400 font-mono text-[10px] uppercase tracking-wider flex justify-between items-center">
                 <span>{language}</span>
@@ -208,27 +211,191 @@ export default function ChatWindow({
           </div>
         );
       }
+
+      // Handle tables
+      const tableMatch = part.match(/^\|[\s\S]*?\|$/m);
+      if (tableMatch) {
+        const tableLines = part.split("\n").filter(line => line.trim().startsWith("|"));
+        if (tableLines.length > 1) {
+          const rows = tableLines.map(line => 
+            line.split("|").filter(cell => cell.trim()).map(cell => cell.trim())
+          );
+          return (
+            <div key={`table-${partIdx}`} className="my-3 overflow-x-auto">
+              <table className="w-full border-collapse text-xs border border-stone-200 dark:border-stone-700">
+                <thead>
+                  <tr className="bg-stone-100 dark:bg-stone-800">
+                    {rows[0].map((cell, idx) => (
+                      <th key={idx} className="border border-stone-200 dark:border-stone-700 px-3 py-2 text-left font-bold text-stone-900 dark:text-white">
+                        {renderInlineElements(cell)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.slice(2).map((row, rIdx) => (
+                    <tr key={rIdx} className="hover:bg-stone-50 dark:hover:bg-stone-900/50">
+                      {row.map((cell, cIdx) => (
+                        <td key={cIdx} className="border border-stone-200 dark:border-stone-700 px-3 py-2 text-stone-700 dark:text-slate-300">
+                          {renderInlineElements(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+      }
+
+      // Split by lines for headers, lists, and block elements
+      const lines = part.split("\n");
+      const elements: React.ReactNode[] = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        const line = lines[i];
+
+        // Headers
+        if (/^#{1,6}\s/.test(line)) {
+          const level = line.match(/^#+/)?.[0].length || 1;
+          const content = line.replace(/^#+\s/, "");
+          const headerClass = {
+            1: "text-2xl font-bold mt-4 mb-2",
+            2: "text-xl font-bold mt-3 mb-2",
+            3: "text-lg font-bold mt-2.5 mb-1.5",
+            4: "text-base font-bold mt-2 mb-1",
+            5: "text-sm font-bold mt-1.5 mb-1",
+            6: "text-xs font-bold mt-1 mb-1",
+          }[level] || "text-base font-bold";
+          elements.push(
+            <div key={`header-${i}`} className={`${headerClass} text-stone-900 dark:text-white`}>
+              {renderInlineElements(content)}
+            </div>
+          );
+          i++;
+          continue;
+        }
+
+        // Horizontal rule
+        if (/^---+$/.test(line)) {
+          elements.push(<hr key={`hr-${i}`} className="my-3 border-stone-200 dark:border-stone-700" />);
+          i++;
+          continue;
+        }
+
+        // Unordered lists
+        if (/^\s*[\*\-]\s/.test(line)) {
+          const listItems: string[] = [];
+          while (i < lines.length && /^\s*[\*\-]\s/.test(lines[i])) {
+            listItems.push(lines[i].replace(/^\s*[\*\-]\s/, ""));
+            i++;
+          }
+          elements.push(
+            <ul key={`ul-${i}`} className="my-2 ml-4 space-y-1">
+              {listItems.map((item, idx) => (
+                <li key={idx} className="text-stone-700 dark:text-slate-300 flex gap-2">
+                  <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                  <span>{renderInlineElements(item)}</span>
+                </li>
+              ))}
+            </ul>
+          );
+          continue;
+        }
+
+        // Regular paragraphs
+        if (line.trim()) {
+          elements.push(
+            <p key={`p-${i}`} className="text-stone-700 dark:text-slate-300 mb-2">
+              {renderInlineElements(line)}
+            </p>
+          );
+        } else {
+          elements.push(<div key={`empty-${i}`} className="h-1" />);
+        }
+        i++;
+      }
+
+      return elements;
+    });
+  };
+
+  // Render inline elements: bold, italic, code, math, links
+  const renderInlineElements = (text: string) => {
+    const parts = text.split(/(```[\s\S]*?```|`[^`]+`|\$\$[\s\S]*?\$\$|\$[^\$]+\$|\*\*[^\*]+\*\*|__[^_]+__|_[^_]+_|\[([^\]]+)\]\(([^\)]+)\))/g);
+    
+    return parts.map((part, idx) => {
+      if (!part) return null;
+
       // Inline code
-      if (part.startsWith("`") && part.endsWith("`")) {
-        const inlineContent = part.slice(1, -1);
+      if (part.startsWith("`") && part.endsWith("`") && !part.startsWith("```")) {
         return (
-          <code key={index} className="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800/80 text-rose-600 dark:text-rose-400 font-mono text-[11px] font-semibold">
-            {inlineContent}
+          <code key={idx} className="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800/80 text-rose-600 dark:text-rose-400 font-mono text-[11px] font-semibold">
+            {part.slice(1, -1)}
           </code>
         );
       }
-      // Standard paragraph text with bold parsing
-      const boldParts = part.split(/(\*\*.*?\*\*)/g);
-      return (
-        <span key={index}>
-          {boldParts.map((bPart, bIdx) => {
-            if (bPart.startsWith("**") && bPart.endsWith("**")) {
-              return <strong key={bIdx} className="font-bold text-stone-900 dark:text-white">{bPart.slice(2, -2)}</strong>;
-            }
-            return bPart;
-          })}
-        </span>
-      );
+
+      // Math (display)
+      if (part.startsWith("$$") && part.endsWith("$$")) {
+        const math = part.slice(2, -2);
+        return (
+          <span key={idx} className="inline-block bg-stone-50 dark:bg-stone-900 px-2 py-1 rounded font-mono text-sm text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-700">
+            {math}
+          </span>
+        );
+      }
+
+      // Math (inline)
+      if (part.startsWith("$") && part.endsWith("$") && !part.startsWith("$$")) {
+        const math = part.slice(1, -1);
+        return (
+          <span key={idx} className="inline font-mono text-stone-800 dark:text-stone-200 bg-stone-100 dark:bg-stone-800/50 px-1 rounded text-sm">
+            {math}
+          </span>
+        );
+      }
+
+      // Bold
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={idx} className="font-bold text-stone-900 dark:text-white">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+
+      // Bold (alt)
+      if (part.startsWith("__") && part.endsWith("__")) {
+        return (
+          <strong key={idx} className="font-bold text-stone-900 dark:text-white">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+
+      // Italic
+      if (part.startsWith("_") && part.endsWith("_")) {
+        return (
+          <em key={idx} className="italic text-stone-800 dark:text-slate-300">
+            {part.slice(1, -1)}
+          </em>
+        );
+      }
+
+      // Links
+      const linkMatch = part.match(/\[([^\]]+)\]\(([^\)]+)\)/);
+      if (linkMatch) {
+        return (
+          <a key={idx} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">
+            {linkMatch[1]}
+          </a>
+        );
+      }
+
+      return part;
     });
   };
 
@@ -406,16 +573,16 @@ export default function ChatWindow({
             {/* Quick starter queries */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full pt-2">
               <button
-                onClick={() => setInput("Explain the latency benefits of using NVIDIA NIM for local LLM inferencing.")}
+                onClick={() => setInput("Prove that the language { a^n b^n | n >= 0 } is not regular.")}
                 className="text-left p-3.5 rounded-xl border border-stone-200 dark:border-white/5 bg-stone-50 hover:bg-stone-100 dark:bg-[#121212] dark:hover:bg-white/5 text-xs text-stone-700 dark:text-slate-300 transition-colors"
               >
-                &quot;Explain the latency benefits of using NVIDIA NIM for local LLM inferencing.&quot;
+                &quot;Prove that the language {'{'} a^n b^n | n &gt;= 0 {'}'} is not regular.&quot;
               </button>
               <button
-                onClick={() => setInput("Explain API rate limits and how to design failovers.")}
+                onClick={() => setInput("Convert the regular expression (0|1)*01 into an NFA, then into a DFA.")}
                 className="text-left p-3.5 rounded-xl border border-stone-200 dark:border-white/5 bg-stone-50 hover:bg-stone-100 dark:bg-[#121212] dark:hover:bg-white/5 text-xs text-stone-700 dark:text-slate-300 transition-colors"
               >
-                &quot;Explain API rate limits and how to design failover loops.&quot;
+                &quot;Convert the regular expression (0|1)*01 into an NFA, then into a DFA.&quot;
               </button>
             </div>
           </div>
@@ -587,24 +754,7 @@ export default function ChatWindow({
               Please select or create a conversation to begin chatting.
             </div>
           )}
-          
-          <div className="mt-3 flex items-center justify-between px-2">
-            <div className="flex items-center gap-4 text-[11px] text-stone-500 dark:text-slate-500">
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span>Low Latency Enabled</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                <span>Whisper Voice Mode</span>
-              </div>
-            </div>
-            {session && (
-              <div className="text-[11px] text-stone-500 dark:text-slate-600 italic">
-                Engine: {session.provider} ({session.model})
-              </div>
-            )}
-          </div>
+
         </div>
       </footer>
     </div>

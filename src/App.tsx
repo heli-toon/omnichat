@@ -20,6 +20,9 @@ export default function App() {
     }
   });
 
+  const AUTOMATA_TUTOR_PROMPT =
+    "You are an expert automata theory tutor. Stay focused on automata theory only, and teach with clear step-by-step explanations, definitions, examples, and hints. If a question is off-topic, politely redirect it back to automata theory.";
+
   const handleToggleSidebar = () => {
     const nextVal = !isSidebarCollapsed;
     setIsSidebarCollapsed(nextVal);
@@ -243,13 +246,18 @@ export default function App() {
         content: m.content,
       }));
 
+      const systemMessage = {
+        role: "system",
+        content: AUTOMATA_TUTOR_PROMPT,
+      };
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: payloadMessages,
+          messages: [systemMessage, ...payloadMessages],
           provider,
           model,
           autoFailover,
