@@ -1,0 +1,6 @@
+{
+  "name": "Multi-Model Chatbot",
+  "description": "A responsive SPA chatbot using Gemini with NVIDIA NIM and OpenRouter failovers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
