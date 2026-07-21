@@ -429,7 +429,7 @@ export default function ChatWindow({
             </div>
             <div>
               <h2 className="text-sm font-semibold tracking-tight text-stone-900 dark:text-white leading-none">
-                {session?.title || "OmniChat Engine"}
+                {session?.title || "OmniChatz Engine"}
               </h2>
               {session && (
                 <div className="flex items-center gap-1 text-[10px] text-stone-400 dark:text-slate-500 mt-1 font-mono">
@@ -609,7 +609,7 @@ export default function ChatWindow({
                   <div className="flex-1 space-y-2 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-stone-900 dark:text-white">
-                        {isUser ? "You" : "OmniChat AI"}
+                        {isUser ? "You" : "OmniChatz AI"}
                       </span>
                       <span className="text-[10px] text-stone-400 dark:text-slate-500">
                         {msg.timestamp}

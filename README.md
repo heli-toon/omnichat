@@ -1,1 +1,1 @@
-# OMNICHAT
+# OmniChatz
