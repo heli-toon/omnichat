@@ -48,7 +48,7 @@ export default function Sidebar({
           </div>
           <div>
             <h1 className="font-display font-bold text-base tracking-tight leading-none text-stone-900 dark:text-white">
-              OmniChatz
+Vardschats
             </h1>
             <span className="text-[10px] text-stone-500 dark:text-slate-500 font-mono tracking-wider">
               AUTO-FAILOVER v1.0

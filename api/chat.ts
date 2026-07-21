@@ -95,7 +95,7 @@ async function tryOpenRouter(messages: any[], model: string): Promise<string> {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${orKey}`,
-      "HTTP-Referer": process.env.APP_URL || "https://omnichat.vercel.app",
+      "HTTP-Referer": process.env.APP_URL || "https://vardschats.vercel.app",
       "X-Title": "Multi-Model Chatbot Applet",
     },
     body: JSON.stringify({
